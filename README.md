@@ -1,5 +1,5 @@
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
-[Open Site](https://phonesstore-react.netlify.com/)
+[_Hosted Here._](https://phonesstore-react.netlify.com/ "Phone Store")
 
-Create from [tutorial:](https://www.youtube.com/watch?v=wPQ1-33teR4)
+Created from [tutorial.](https://www.youtube.com/watch?v=wPQ1-33teR4 "Youtube Tutorial by Devstackr")
