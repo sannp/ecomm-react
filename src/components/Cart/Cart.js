@@ -1,34 +1,65 @@
-import React, { Component } from 'react';
-import Title from '../Title';
-import CartColumns from './CartColumns';
-import EmptyCart from './EmptyCart';
-import { ProductConsumer } from '../../context';
-import CartList from './CartList';
-import CartTotals from './CartTotals';
+import React, { useState, useEffect } from "react";
 
-export default class Cart extends Component {
-    render() {
-        return (
-            <section>
-                <ProductConsumer>
-                    {(value) => {
-                        const {cart} = value;
-                        if(cart.length>0){
-                            return(
-                                <React.Fragment>
-                                    <Title name="your" title="cart" />
-                                    <CartColumns />
-                                    <CartList value={value}/>
-                                    <CartTotals value={value} history={this.props.history} />
-                                </React.Fragment>
-                            );
-                        }else{
-                            return <EmptyCart />;        
-                        }
-                    }}
-                    
-                </ProductConsumer>
-            </section>
-        );
-    }
+// Components
+import Title from "../Title";
+import CartColumns from "./CartColumns";
+import EmptyCart from "./EmptyCart";
+import CartItem from "./CartItem";
+import CartTotals from "./CartTotals";
+
+// Functions
+import {
+  removeFromCart,
+  decrement,
+  addToCart,
+} from "../../actions/cartActions";
+import cartStore from "../../stores/cartStore";
+
+export default function Cart(props) {
+  const [products, setProducts] = useState(cartStore.getCartProducts());
+
+  useEffect(() => {
+    cartStore.addChangeListener(onChange);
+    return () => cartStore.removeChangeListener(onChange);
+  }, [products.length]);
+
+  function onChange() {
+    setProducts(cartStore.getCartProducts());
+  }
+
+  function increment(id) {
+    let product = products.find((prod) => prod._id === id);
+    addToCart(product);
+    props.history.push("/cart");
+  }
+
+  function decrementProd(id) {
+    decrement(id);
+    props.history.push("/cart");
+  }
+
+  return (
+    <>
+      {products.length > 0 ? (
+        <>
+          <Title name="your" title="cart" />
+          <CartColumns />
+          {products.map((item) => {
+            return (
+              <CartItem
+                key={item._ID}
+                item={item}
+                removeItem={removeFromCart}
+                increment={increment}
+                decrement={decrementProd}
+              />
+            );
+          })}
+          <CartTotals total={cartStore.getTotal()} />
+        </>
+      ) : (
+        <EmptyCart />
+      )}
+    </>
+  );
 }
