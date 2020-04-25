@@ -14,7 +14,7 @@ import actionTypes from "./actionTypes";
 // }
 
 export function loadProducts() {
-  return fetch("http://localhost:5000/", {
+  return fetch("https://ecomm-stores.herokuapp.com/", {
     method: "GET",
   })
     .then((response) => response.json())
