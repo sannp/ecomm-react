@@ -1,76 +1,49 @@
-import { EventEmitter } from "events";
-import Dispatcher from "../appDispatcher";
-import actionTypes from "../actions/actionTypes";
+import * as types from "./actionTypes";
 import auth0 from "auth0-js";
 
-const REDIRECT_ON_LOGIN = "redirect_on_login";
-const CHANGE_EVENT = "change";
 // Stored outside class since private
 // eslint-disable-next-line
 let _idToken = null;
 let _accessToken = null;
 let _scopes = null;
 let _expiresAt = null;
+let _auth = null;
 
-class AuthStore extends EventEmitter {
-  constructor() {
-    super();
-    this.history = null;
-    this.userProfile = null;
-    this.requestedScopes = "openid profile email read:courses";
-    this.auth0 = new auth0.WebAuth({
-      domain: process.env.REACT_APP_AUTH0_DOMAIN,
-      clientID: process.env.REACT_APP_AUTH0_CLIENT_ID,
-      redirectUri: process.env.REACT_APP_AUTH0_CALLBACK_URL,
-      audience: process.env.REACT_APP_AUTH0_AUDIENCE,
-      responseType: "token id_token",
-      scope: this.requestedScopes,
-    });
-  }
-
-  addChangeListener(callback) {
-    this.on(CHANGE_EVENT, callback);
-  }
-
-  removeChangeListener(callback) {
-    this.removeListener(CHANGE_EVENT, callback);
-  }
-
-  emitChange() {
-    this.emit(CHANGE_EVENT);
-  }
+class Auth {
+  history = null;
+  userProfile = null;
+  requestedScopes = "openid profile email";
+  auth0 = new auth0.WebAuth({
+    domain: process.env.REACT_APP_AUTH0_DOMAIN,
+    clientID: process.env.REACT_APP_AUTH0_CLIENT_ID,
+    redirectUri: process.env.REACT_APP_AUTH0_CALLBACK_URL,
+    audience: process.env.REACT_APP_AUTH0_AUDIENCE,
+    responseType: "token id_token",
+    scope: this.requestedScopes,
+  });
 
   setHistory = (history) => {
     this.history = history;
   };
 
   login = () => {
-    localStorage.setItem(
-      REDIRECT_ON_LOGIN,
-      JSON.stringify(this.history.location)
-    );
     this.auth0.authorize();
   };
 
-  handleAuthentication = () => {
+  handleAuthentication = (res, rej) => {
     this.auth0.parseHash((err, authResult) => {
       if (authResult && authResult.accessToken && authResult.idToken) {
         this.setSession(authResult);
-        const redirectLocation =
-          localStorage.getItem(REDIRECT_ON_LOGIN) === "undefined"
-            ? "/"
-            : JSON.parse(localStorage.getItem(REDIRECT_ON_LOGIN));
-        this.history.push(redirectLocation);
+        res(authResult);
       } else if (err) {
-        this.history.push("/");
         alert(`Error: ${err.error}. Check the console for further details.`);
         console.log(err);
       }
-      localStorage.removeItem(REDIRECT_ON_LOGIN);
     });
   };
 
   setSession = (authResult) => {
+    _auth = authResult;
     // set the time that the access token will expire
     _expiresAt = authResult.expiresIn * 1000 + new Date().getTime();
 
@@ -133,21 +106,34 @@ class AuthStore extends EventEmitter {
   }
 }
 
-const store = new AuthStore();
+export function loginSuccess() {
+  return { type: types.LOGIN, user: _auth };
+}
 
-Dispatcher.register((action) => {
-  switch (action.actionType) {
-    case actionTypes.LOGIN:
-      store.login();
-      store.emitChange();
-      break;
-    case actionTypes.LOGOUT:
-      store.logout();
-      store.emitChange();
-      break;
-    default:
-    // nothing to do here
-  }
-});
+export function logoutSuccess() {
+  return { type: types.LOGOUT };
+}
 
-export default store;
+export function loginCallback() {
+  return function (dispatch) {
+    dispatch(loginSuccess());
+  };
+}
+
+export function logout(dispatch) {
+  return dispatch(logoutSuccess());
+}
+// export function logout(dispatch) {
+//   dispatch(beginApiCall());
+//   return authApi
+//     .logout()
+//     .then(() => {
+//       dispatch(logoutSuccess());
+//     })
+//     .catch((error) => {
+//       dispatch(apiCallError(error));
+//       throw error;
+//     });
+// }
+
+export default Auth = new Auth();

@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { ButtonContainer } from "./Button";
-import productStore from "../stores/productStore";
-import cartStore from "../stores/cartStore";
-import { loadProducts } from "../actions/productActions";
-import { addToCart } from "../actions/cartActions";
+import { ButtonContainer } from "../Button";
+import { connect, useSelector } from "react-redux";
+import PropTypes from "prop-types";
+import { bindActionCreators } from "redux";
+import { loadProducts } from "../../redux/actions/productActions";
+import { addToCart } from "../../redux/actions/cartActions";
+import { toast } from "react-toastify";
 
-export default function Details(props) {
-  const [products, setProducts] = useState(productStore.getProducts());
+export function Details(props) {
+  const products = useSelector((store) => store.products);
   const [product, setProduct] = useState({
     company: "",
     img: "",
@@ -17,18 +19,17 @@ export default function Details(props) {
   });
 
   useEffect(() => {
-    productStore.addChangeListener(onChange);
     const id = props.match.params.id; // from the path `/details/:id`
-    if (products.length === 0) {
-      loadProducts();
-    } else if (id) {
-      setProduct(productStore.getProductById(id));
+    if (products.length !== 0) {
+      findProduct(id);
+    } else {
+      props.actions.loadProducts();
     }
-    return () => productStore.removeChangeListener(onChange);
-  }, [products.length, props.match.params.id]);
+  }, [products.length]);
 
-  function onChange() {
-    setProducts(productStore.getProducts());
+  function findProduct(id) {
+    let prod = products.find((prod) => prod._id === id);
+    setProduct(prod);
   }
 
   return (
@@ -65,6 +66,16 @@ export default function Details(props) {
             </Link>
             <ButtonContainer
               cart
+              onClick={() => {
+                props.actions.addToCart(product);
+                toast.success("Added to Cart");
+                props.history.push("/cart");
+              }}
+            >
+              Add to Cart
+            </ButtonContainer>
+            {/* <ButtonContainer
+              cart
               disabled={
                 cartStore.isProductInCart(props.match.params.id) ? true : false
               }
@@ -77,7 +88,7 @@ export default function Details(props) {
               {cartStore.isProductInCart(props.match.params.id)
                 ? "inCart"
                 : "add to cart"}
-            </ButtonContainer>
+            </ButtonContainer> */}
           </div>
         </div>
       </div>
@@ -85,3 +96,27 @@ export default function Details(props) {
     </div>
   );
 }
+
+Details.propTypes = {
+  products: PropTypes.array.isRequired,
+  actions: PropTypes.object.isRequired,
+  loading: PropTypes.bool.isRequired,
+};
+
+function mapStateToProps(state) {
+  return {
+    products: state.products.length === 0 ? [] : state.products,
+    loading: state.apiCallsInProgress > 0,
+  };
+}
+
+function mapDispatchToProps(dispatch) {
+  return {
+    actions: {
+      loadProducts: bindActionCreators(loadProducts, dispatch),
+      addToCart: bindActionCreators(addToCart, dispatch),
+    },
+  };
+}
+
+export default connect(mapStateToProps, mapDispatchToProps)(Details);
